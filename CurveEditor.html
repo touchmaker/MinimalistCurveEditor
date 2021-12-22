@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>Curve Editor</title>
+</head>
+<body onload="run()">
+	<canvas id='canvas' width="300" height="300"></canvas>
+	<script type="text/javascript">
+		var canvas,ctx;
+		var pts = [];
+		var sel_id = -1;
+
+		function dist2 (p1,p2){
+			var x = p1.x-p2.x,
+			y = p1.y-p2.y;
+			return Math.sqrt(x*x+y*y) ; 
+		}
+
+		function onMouseMove(event){
+			mx = event.clientX;
+			my = event.clientY;
+			mouse = windowToCanvas(mx, my);
+			// clap val+e
+
+			var clap_min = sel_id>0?pts[sel_id-1].x:0
+			var clap_max = sel_id<pts.lenth?pts[sel_id+1].x:canvas.width
+
+			mouse.x = Math.min(mouse.x,clap_max)
+			mouse.x = Math.max(mouse.x,clap_min)
+
+			console.log(clap_min,clap_max)
+			if(sel_id!=-1){
+				pts[sel_id] = mouse;
+			}
+			redraw();
+		}
+		
+		function onMouseDown(event){
+			mx = event.clientX;
+			my = event.clientY;
+			mouse = windowToCanvas(mx, my);
+			sel_id = -1;
+			var insert_id = 0;
+			var N = pts.length - 1
+			for (var i=0; i <= N; i++) {
+				dd = dist2(mouse,pts[i])
+				if (dd<10){
+					console.log("s",sel_id)
+					sel_id = i;
+				}
+				if(mouse.x>=pts[i].x){
+					insert_id = i;
+				}
+			}
+			if(sel_id==-1){
+				console.log("i",insert_id)
+				pts.splice(insert_id+1,0,mouse);
+				sel_id = insert_id+1;
+			}
+
+			redraw();
+		}
+
+		function onMouseUp(){
+			mx = event.clientX;
+			my = event.clientY;
+		    mouse = windowToCanvas(mx, my);
+		    sel_id = -1;
+			console.log("mouseup")
+			redraw();
+		}
+
+		function onMouseOut(){
+		    mouse = windowToCanvas(mx, my);
+		    sel_id = -1;
+		    console.log("mouseout")
+			redraw();
+		}
+
+		function windowToCanvas(x, y) {
+		var bbox = canvas.getBoundingClientRect();
+		return {
+			x : x - bbox.left * (canvas.width / bbox.width),
+			y : y - bbox.top * (canvas.height / bbox.width)
+		};
+	}
+
+
+		function redraw(){
+			
+			ctx.fillStyle="white";
+
+			ctx.clearRect(0,0,canvas.width,canvas.height);
+
+			//draw boarder
+			ctx.strokeStyle="grey";
+			ctx.beginPath();
+			ctx.moveTo(0,0);
+			ctx.lineTo(canvas.width,0);
+			ctx.lineTo(canvas.width,canvas.height);
+			ctx.lineTo(0,canvas.height);
+			ctx.lineTo(0,0);
+			ctx.stroke();
+
+			ctx.strokeStyle="blue";
+			ctx.beginPath();
+			var N = pts.length - 1
+			ctx.moveTo(pts[0].x,pts[0].y);
+			for (var i=1; i <= N; i++) {
+				// ctx.lineTo(pts[i].x,pts[i].y);
+				ip = interp(i);
+				// ctx.fillRect(ip[0].x,ip[0].y, 2, 2);
+				// ctx.fillRect(ip[0].x,ip[0].y, 2, 2);
+				ctx.bezierCurveTo(ip[0].x,ip[0].y,ip[1].x,ip[1].y,ip[2].x,ip[2].y);
+			}
+			ctx.stroke();
+
+			ctx.beginPath();
+			ctx.fillStyle="black";
+			for (var i=0; i <= N; i++) {
+				// ctx.lineTo(pts[i].x,pts[i].y);
+				ip = interp(i);
+				// ctx.fillRect(ip[0].x,ip[0].y, 2, 2);
+				ctx.fillRect(ip[1].x,ip[1].y, 3, 3);
+				// ctx.fillRect(ip[2].x,ip[2].y, 2, 2);
+				// ctx.bezierCurveTo(ip[0].x,ip[0].y,ip[1].x,ip[1].y,ip[2].x,ip[2].y);
+			}
+			ctx.fill();
+		}
+
+		function mid(p1,p2){
+			return{
+				x:(p1.x+p2.x)/2,
+				y:(p1.y+p2.y)/2
+			}
+		}
+
+		function interp(i){
+			var N = pts.length - 1;
+			var p1 = i>0 ?pts[i-1]:pts[0]
+			var p2 = pts[i]
+			var p3 = i<N ?pts[i+1]:pts[N]
+			var ip1 = mid(p1,p2)
+			var ip3 = mid(p2,p3)
+			return [ip1,p2,ip3]
+		}
+
+		function run() {
+			canvas = document.getElementById("canvas");
+			ctx = canvas.getContext('2d');
+			// setSize();
+			canvas.addEventListener( 'mousedown', onMouseDown, false );
+			canvas.addEventListener( 'mousemove', onMouseMove, false );
+			canvas.addEventListener( 'mouseup', onMouseUp, false );
+			canvas.addEventListener( 'mouseout',onMouseOut, false)
+			window.onresize = function () {
+				setSize();
+			}
+			pts.push({x:0,y:300});
+			pts.push({x:300,y:0});
+			redraw();
+		}
+
+
+
+	</script>
+</body>
+</html>
